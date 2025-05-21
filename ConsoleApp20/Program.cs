@@ -1,51 +1,155 @@
-﻿using System;
-using System.Drawing;
-using System.Numerics;
-using System.Security.Cryptography;
-using System.Text;
+﻿using System.Text;
+using System.Threading;
 namespace Blastangel
 {
     class Program
     {
-        public static Map map = new Map();
-        public static Player player = new Player(7, 14,map);
+        public static Map map;
+        public static Player player;
+        public static SemaphoreSlim s = new SemaphoreSlim(1, 1);
+        static bool isEnd = false;
         static void Main()
         {
+            string c;
             Console.OutputEncoding = Encoding.UTF8;
-            Start(map);
-            while (true)
+            do
             {
-                Console.WriteLine("Dungeon ✠");
-                map.DisplayMap();
-                map.rooms[player.RoomY, player.RoomX].DisplayRoom(player);
-                MovePlayer(player.RoomX, player.RoomY);
                 Console.Clear();
-            }
+                map = new Map();
+                player = new Player(7, 14, map);
+                Start(map);
+                Thread time = new Thread(Tempo);
+                time.Start();
+                while (true)
+                {
+                    if (player.isAttacking)
+                    {
+                        si();
+                        Thread.Sleep(50);
+                        Console.Clear();
+                        player.isAttacking = false;
+                    }
+                    si();
+                    if (!isPlayerAlive())
+                    {
+                        Console.WriteLine("Sei morto");
+                        isEnd = true;
+                        break;
+                    }
+                    else if (map.rooms[map.BossRoomY, map.BossRoomX].Mob.Any(m => m.Health <= 0))
+                    {
+                        Console.WriteLine("Hai vinto");
+                        isEnd = true;
+                        break;
+                    }
+                    MovePlayer(player.RoomX, player.RoomY);
+                    Console.Clear();
+                }
+                time.Join();
+                do
+                {
+                    Console.WriteLine("Vuoi continuare? (Y/N)");
+                    c = Console.ReadLine();
+                } while (c != "Y" && c != "N");
+            } while (c == "Y");
+            Console.WriteLine("Grazie per aver giocato!");
+            Console.ReadKey();
         }
+
+
+        static void si()
+        {
+            Console.WriteLine("Dungeon ✠ - GiuliLobs beta v1.0");
+            s.Wait();
+            //map.DisplayMap(); CHEAT
+            map.rooms[player.RoomY, player.RoomX].DisplayRoom(player);
+            player.DisplayPlayerStats();
+            s.Release();
+        }
+        static void Tempo()
+        {
+            DateTime tInizio = DateTime.Now;
+            Thread.Sleep(1000);
+            while (isEnd)
+            {
+                s.Wait();
+                Console.WriteLine("Tempo di gioco: " + (DateTime.Now - tInizio).ToString(@"mm\:ss"));
+
+                if (!(Console.CursorTop == 0))
+                {
+                    try
+                    {
+                        Console.SetCursorPosition(0, Console.CursorTop - 1);
+                    }
+                    catch (ArgumentOutOfRangeException)
+                    {
+                        Console.SetCursorPosition(0, Console.CursorTop+1);
+                    }
+                }
+                s.Release();
+                Thread.Sleep(1000);
+            }
+            DateTime tFine = DateTime.Now;
+
+            Console.WriteLine("Tempo di gioco: " + (tFine - tInizio).ToString(@"mm\:ss"));
+        }
+
         static void Start(Map map)
         {
             map.GenerateMap(map);
-            player.RoomY = map.spawnRoomY;
-            player.RoomX = map.spawnRoomX;
+            player.RoomY = map.SpawnRoomY;
+            player.RoomX = map.SpawnRoomX;
         }
-        static void MovePlayer(int roomX,int roomY)
+        static bool isPlayerAlive()
         {
+            if (player.Health <= 0)
+            {
+                player.Health = 0;
+                return false;
+            }
+            return true;
+        }
+        static void MovePlayer(int roomX, int roomY)
+        {
+            
             ConsoleKeyInfo key = Console.ReadKey(true);
 
             int newX = player.Y;
             int newY = player.X;
-            int layoutX = map.rooms[roomY, roomX].Layout.GetLength(0);
-            int layoutY = map.rooms[roomY, roomX].Layout.GetLength(1);
+            Room room = map.rooms[roomY, roomX];
+            int layoutX = room.Layout.GetLength(0);
+            int layoutY = room.Layout.GetLength(1);
             bool goingBottomRoom = false;
             bool goingRightRoom = false;
             bool goingTopRoom = false;
             bool goingLeftRoom = false;
+            player.isAttacking = false;
             if (key.Key == ConsoleKey.W) newY--;
             if (key.Key == ConsoleKey.S) newY++;
             if (key.Key == ConsoleKey.A) newX--;
             if (key.Key == ConsoleKey.D) newX++;
 
-            if (IsInsideBounds(newX, newY, layoutX, layoutY) && map.rooms[roomY, roomX].Layout[newY, newX] == ' ')
+            if (key.Key == ConsoleKey.Enter)
+            {
+                player.isAttacking = true;
+                var list = room.Mob;
+                foreach (var mob in list)
+                {
+                    if (mob.Health <= 0) continue;
+                    if (
+                        player.X-1 == mob.X && player.Y == mob.Y ||
+                        player.X + 1 == mob.X && player.Y == mob.Y ||
+                        player.X == mob.X && player.Y -1== mob.Y ||
+                        player.X == mob.X && player.Y +1== mob.Y
+                       )
+                    {
+                        player.Attack(mob);
+                        break;
+                    }
+                }
+            }
+            bool isMob = room.Mob.Any(m => m.X == newY && m.Y == newX && m.Health > 0);
+            if (IsInsideBounds(newX, newY, layoutX, layoutY) && room.Layout[newY, newX] == ' ' && !isMob)
             {
                 goingBottomRoom = (newY == layoutX - 1);
                 goingRightRoom = (newX == layoutY - 1);
@@ -59,12 +163,12 @@ namespace Blastangel
                 else if (goingLeftRoom)
                 {
                     player.RoomX--;
-                    player.Y = layoutY-2;
+                    player.Y = layoutY - 2;
                 }
                 else if (goingTopRoom)
                 {
                     player.RoomY--;
-                    player.X = layoutX-2;
+                    player.X = layoutX - 2;
                 }
                 else if (goingRightRoom)
                 {
@@ -78,620 +182,9 @@ namespace Blastangel
                 }
             }
         }
-        static bool IsInsideBounds(int x, int y, int lX, int lY)
+        public static bool IsInsideBounds(int x, int y, int lX, int lY)
         {
             return ((x > -1 && x < lY) && (y > -1 && y < lX));
-        }
-    }
-    public class Player
-    {
-        char _symbol = '✠';
-        int roomX;
-        int roomY;
-        public char Symbol { get { return _symbol; } }
-        public int X { get; set; }
-        public int Y { get; set; }
-        public int RoomX { get { return roomX; } set { roomX = value; } }
-        public int RoomY { get { return roomY; } set { roomY = value; } }
-        public int Health { get; set; }
-        public int Damage { get; set; }
-        public int MaxHealth { get; set; }
-        public Player(int x, int y, Map map)
-        {
-            X = x;
-            Y = y;
-            Damage = 2;
-            MaxHealth = 10;
-            Health = MaxHealth;
-            RoomX = map.spawnRoomX;
-            RoomY = map.spawnRoomY;
-        }
-        public void Attack(Monster monster)
-        {
-            monster.Health -= Damage;
-        }
-        public void Heal(Potion potion)
-        {
-            Health += potion.HealAmount;
-        }
-    }
-    public class Monster
-    {
-        public int X { get; set; }
-        public int Y { get; set; }
-        public int Health { get; set; }
-        public int Damage { get; set; }
-        public Monster(int x, int y)
-        {
-            X = x;
-            Y = y;
-            Health = RandomNumberGenerator.GetInt32(5, 10);
-            Damage = RandomNumberGenerator.GetInt32(1, 3);
-        }
-        public void Attack(Player player)
-        {
-            player.Health -= Damage;
-        }
-    }
-    public abstract class Item
-    {
-        public string Name { get; set; }
-        public Item(string name) { }
-    }
-    public class Potion : Item
-    {
-        public int HealAmount { get; set; }
-        public Potion(string name)
-            : base(name)
-        {
-            HealAmount = RandomNumberGenerator.GetInt32(1, 5);
-            Name = "Pozione di vita";
-        }
-    }
-    public class Weapon : Item
-    {
-        public int Damage { get; set; }
-        public Weapon(string name)
-            : base(name)
-        {
-            switch (RandomNumberGenerator.GetInt32(1, 4))
-            {
-                case 1: //spada
-                    Name = "Spada";
-                    Damage = RandomNumberGenerator.GetInt32(3, 6);
-                    break;
-                case 2: //ascia
-                    Name = "Ascia";
-                    Damage = RandomNumberGenerator.GetInt32(2, 5);
-                    break;
-                case 3: //mazza
-                    Name = "Mazza";
-                    Damage = RandomNumberGenerator.GetInt32(2, 4);
-                    break;
-            }
-
-        }
-    }
-    public class Drop
-    {
-        public int X { get; set; }
-        public int Y { get; set; }
-        public Item Item { get; set; }
-        public Drop(int x, int y)
-        {
-            X = x;
-            Y = y;
-            switch (RandomNumberGenerator.GetInt32(0, 2))
-            {
-                case 0:
-                    Item = (new Potion("Pozione"));
-                    break;
-                case 1:
-                    Item = (new Weapon("Arma"));
-                    break;
-            }
-        }
-    }
-    public class Room
-    {
-        public int X { get; set; }
-        public int Monsters { get; set; }
-        public int Y { get; set; }
-        public char[,] Layout { get; set; }
-
-        public Room(int x, int y, char[,] layout)
-        {
-            X = x;
-            Y = y;
-            Layout = layout;
-            Monsters = RandomNumberGenerator.GetInt32(0, 4);
-        }
-
-        public void DisplayRoom(Player player)
-        {
-            Console.WriteLine();
-            for (int i = 0; i < Layout.GetLength(0); i++)
-            {
-                for (int j = 0; j < Layout.GetLength(1); j++)
-                {
-                    if (player.X == i && player.Y == j)
-                    {
-                        Console.Write(player.Symbol);
-                    }
-                    else
-                        Console.Write(Layout[i, j]);
-                }
-                Console.WriteLine();
-            }
-        }
-    }
-    public class Map
-    {
-
-        static Random rnd = new Random();
-        static private int SIZE = 8;
-        public Room[,] rooms;
-        static int[,] grid = new int[SIZE, SIZE];
-        public int spawnRoomX, spawnRoomY;
-        public Map()
-        {
-            rooms = new Room[SIZE, SIZE];
-        }
-        public void GenerateMap(Map map)
-        {
-            int x = 0, y = 0;
-            bool hasSpawn = false;
-            bool hasBoss = false;
-            grid[rnd.Next(0, SIZE), rnd.Next(0, SIZE)] = 1;
-            for (int i = 0; i < rnd.Next(0, 40); i++)
-                Search(map);
-
-            for (int i = 0; i < grid.GetLength(0); i++)
-            {
-                for (int j = 0; j < grid.GetLength(1); j++)
-                {
-                    rooms[i, j] = new Room(i, j, SelectRoomPreset(j, i));
-                }
-            }
-            while ((!hasSpawn || !hasBoss))
-            {
-                y = rnd.Next(0, SIZE);
-                x = rnd.Next(0, SIZE);
-                if ((grid[y, x] == 1) && !hasSpawn)
-                {
-                    grid[y, x] = 2;
-                    spawnRoomX = x; spawnRoomY = y;
-                    hasSpawn = true;
-                }
-                y = rnd.Next(0, SIZE);
-                x = rnd.Next(0, SIZE);
-                if ((grid[y, x] == 1) && !hasBoss)
-                {
-                    grid[y, x] = 3;
-                    hasBoss = true;
-                }
-            }
-
-
-        }
-        static void Search(Map map)
-        {
-            int rows = grid.GetLength(0);
-            int cols = grid.GetLength(1);
-            int startX = -1, startY = -1;
-            bool found = false;
-            for (int i = 0; i < rows && !found; i++)
-            {
-                for (int j = 0; j < cols && !found; j++)
-                {
-                    if (grid[i, j] == 1 && i >= 0 && i < SIZE && j >= 0 && j < SIZE)
-                    {
-                        startY = i;
-                        startX = j;
-                        found = true;
-                        map.GenerateRoom(startY, startX);
-                    }
-                }
-            }
-            if (!found) return;
-            int x = startX;
-            int y = startY;
-            int maxSteps = 10;
-            (int dx, int dy)[] directions = new (int, int)[]
-            {
-                (1, 0),
-                (-1, 0),
-                (0, 1),
-                (0, -1),
-
-            };
-
-            for (int step = 0; step < maxSteps; step++)
-            {
-                var dir = directions[rnd.Next(directions.Length)];
-                int newX = x + dir.dx, newY = y + dir.dy;
-                if (newX >= rows) newX = rows - 1;
-                if (newX < 0) newX = 0;
-                if (newY >= cols) newY = cols - 1;
-                if (newY < 0) newY = 0;
-                if (grid[newY, newX] == 0)
-                {
-                    grid[newY, newX] = 1;
-                    x = newX;
-                    y = newY;
-
-                }
-                else
-                {
-                    if (rnd.NextDouble() < 0.1)
-                        break;
-                }
-            }
-        }
-        public void GenerateRoom(int x, int y)
-        {
-            char[,] selectedLayout = SelectRoomPreset(x, y);
-            rooms[y, x] = new Room(x, y, selectedLayout);
-        }
-        public void DisplayMap()
-        {
-            for (int i = 0; i < grid.GetLength(1); i++)
-            {
-                for (int j = 0; j < grid.GetLength(0); j++)
-                {
-                    Console.Write(" " + grid[i, j] + " ");
-                }
-                Console.WriteLine();
-            }
-        }
-        static private char[,] SelectRoomPreset(int x, int y)
-        {
-            bool hasTopDoor = (y > 0 && grid[y - 1, x] != 0);
-            bool hasBottomDoor = (y < SIZE - 1 && grid[y + 1, x] != 0);
-            bool hasLeftDoor = (x > 0 && grid[y, x - 1] != 0);
-            bool hasRightDoor = (x < SIZE - 1 && grid[y, x + 1] != 0);
-            {
-                if (hasBottomDoor && hasLeftDoor && hasRightDoor && hasTopDoor) //tutte DDA FINIRE
-                {
-                    return RoomPreset.room_bottom_right_left_up;
-                }
-                else if (hasBottomDoor && hasLeftDoor && hasRightDoor && !hasTopDoor)
-                {
-                    return RoomPreset.room_bottom_right_left; //  porte in basso destra e sinistra
-                }
-                else if (!hasRightDoor && hasLeftDoor && hasTopDoor && hasBottomDoor)
-                {
-                    return RoomPreset.room_bottom_left_up; //  porte in alto a sinistra e destra
-                }
-                else if (hasRightDoor && hasLeftDoor && hasTopDoor && !hasBottomDoor)
-                {
-                    return RoomPreset.room_right_left_up; //  porte in alto a sinistra e destra
-                }
-                else if (hasBottomDoor && hasLeftDoor && hasRightDoor && !hasTopDoor)
-                {
-                    return RoomPreset.room_bottom_right_left; //  porte in basso a sinistra e destra
-                }
-                else if (hasTopDoor && hasBottomDoor && hasRightDoor && !hasLeftDoor)
-                {
-                    return RoomPreset.room_bottom_right_up; //  porte in alto e basso e a destra
-                }
-                else if (hasBottomDoor && hasRightDoor && !hasLeftDoor && !hasTopDoor)
-                {
-                    return RoomPreset.room_bottom_right; //  porte in basso e destra
-                }
-                else if (hasBottomDoor && hasLeftDoor && !hasRightDoor && !hasTopDoor)
-                {
-                    return RoomPreset.room_bottom_left; //  porte in basso a sinistra
-                }
-                else if (hasLeftDoor && hasRightDoor && !hasBottomDoor && !hasTopDoor)
-                {
-                    return RoomPreset.room_right_left; //  porte a sinistra e destra
-                }
-                else if (hasTopDoor && hasBottomDoor && !hasRightDoor && !hasLeftDoor)
-                {
-                    return RoomPreset.room_bottom_up; //  porte in alto e basso
-                }
-                else if (hasTopDoor && hasRightDoor && !hasBottomDoor && !hasLeftDoor)
-                {
-                    return RoomPreset.room_right_up; //  porte a destra e alto
-                }
-                else if (hasLeftDoor && hasTopDoor && !hasRightDoor && !hasBottomDoor)
-                {
-                    return RoomPreset.room_left_up; //  porte a sinistra e alto
-                }
-                else if (hasTopDoor && !hasBottomDoor && !hasLeftDoor && !hasRightDoor)
-                {
-                    return RoomPreset.room_up; //  porta in alto
-                }
-                else if (hasBottomDoor && !hasTopDoor && !hasLeftDoor && !hasRightDoor)
-                {
-                    return RoomPreset.room_bottom; //  porta in basso
-                }
-                else if (hasRightDoor && !hasTopDoor && !hasLeftDoor && !hasBottomDoor)
-                {
-                    return RoomPreset.room_right; //  porta a destra
-                }
-                else
-                {
-                    return RoomPreset.room_left; //  porta a sinistra
-                }
-            } //assegna stanze in base a porte
-        }
-        public static class RoomPreset
-        {
-            public static char[,] room_bottom = new char[15, 29]
-            {
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            };
-
-
-
-            public static char[,] room_left = new char[15, 29]
-        {
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' }
-        };
-            public static char[,] room_right = new char[15, 29]
-            {
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' }
-            };
-            public static char[,] room_up = new char[15, 29]
-            {
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' }
-            };
-            public static char[,] room_bottom_right = new char[15, 29]
-            {
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            };
-            public static char[,] room_left_up = new char[15, 29]
-            {
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' }
-            };
-            public static char[,] room_bottom_left = new char[15, 29]
-            {
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-    };
-            public static char[,] room_right_up = new char[15, 29]
-    {
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' }
-    };
-            public static char[,] room_right_left = new char[15, 29]
-            {
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' }
-            };
-            public static char[,] room_bottom_up = new char[15, 29]
-    {
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-    };
-            public static char[,] room_bottom_left_up = new char[15, 29]
-    {
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-    };
-            public static char[,] room_bottom_right_up = new char[15, 29]
-    {
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-    };
-            public static char[,] room_bottom_right_left = new char[15, 29]
-            {
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            };
-            public static char[,] room_right_left_up = new char[15, 29]
-    {
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█','█' },
-    };
-            public static char[,] room_bottom_right_left_up = new char[15, 29]
-            {
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            { '█','█','█','█','█','█','█','█','█','█','█',' ',' ',' ',' ',' ',' ',' ','█','█','█','█','█','█','█','█','█','█','█' },
-            };
         }
     }
 }

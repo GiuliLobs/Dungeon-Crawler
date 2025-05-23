@@ -1,4 +1,7 @@
-﻿namespace Blastangel
+﻿using System;
+using System.Threading.Tasks.Dataflow;
+
+namespace Blastangel
 {
     internal class Map
     {
@@ -21,10 +24,63 @@
 
         public void GenerateMap(Map map)
         {
+            int nRooms;
+            for (int i = 0; i < SIZE; i++)
+            {
+                for (int j = 0; j < SIZE; j++)
+                {
+                    grid[i, j] = 0;
+                }
+            }
+            int startY = rnd.Next(0, SIZE);
+            int startX = rnd.Next(0, SIZE);
+            grid[startY, startX] = 1;
+            List<(int x, int y)> activeRooms = new();
+            int roomCount = 1;
+            int minRooms = 10;
 
-            grid[rnd.Next(0, SIZE), rnd.Next(0, SIZE)] = 1;
-            for (int i = 0; i < rnd.Next(0, 40); i++)
-                Search(map);
+            activeRooms.Add((startX, startY));
+
+            while (activeRooms.Count > 0)
+            {
+                int index = rnd.Next(activeRooms.Count);
+                var (x, y) = activeRooms[index];
+
+                (int dx, int dy)[] directions = new (int, int)[]
+                {
+        (1, 0), (-1, 0), (0, 1), (0, -1),
+                };
+
+                directions = directions.OrderBy(_ => rnd.Next()).ToArray();
+
+                bool expanded = false;
+                foreach (var (dx, dy) in directions)
+                {
+                    int nx = x + dx;
+                    int ny = y + dy;
+
+                    if (nx >= 0 && nx < SIZE && ny >= 0 && ny < SIZE && grid[ny, nx] == 0)
+                    {
+                        if (IsTooCrowded(nx, ny, 1))
+                            continue;
+
+                        grid[ny, nx] = 1;
+                        activeRooms.Add((nx, ny));
+                        roomCount++;
+                        expanded = true;
+                        break;
+                    }
+                }
+                if (!expanded)
+                {
+                    activeRooms.RemoveAt(index);
+                }
+                if (roomCount >= minRooms && rnd.NextDouble() < 0.1)
+                    break;
+            }
+
+
+
             bool hasSpawn = false;
             bool hasBoss = false;
             while (!hasSpawn || !hasBoss)
@@ -54,58 +110,25 @@
                 }
             }
         }
-        static void Search(Map map)
+        bool IsTooCrowded(int x, int y, int radius = 1)
         {
-            int rows = grid.GetLength(0);
-            int cols = grid.GetLength(1);
-            int startX = -1, startY = -1;
-            bool found = false;
-            for (int i = 0; i < rows && !found; i++)
+            int count = 0;
+            for (int dy = -radius; dy <= radius; dy++)
             {
-                for (int j = 0; j < cols && !found; j++)
+                for (int dx = -radius; dx <= radius; dx++)
                 {
-                    if (grid[i, j] == 1 && i >= 0 && i < SIZE && j >= 0 && j < SIZE)
+                    int nx = x + dx;
+                    int ny = y + dy;
+                    if (nx >= 0 && nx < SIZE && ny >= 0 && ny < SIZE)
                     {
-                        startY = i;
-                        startX = j;
-                        found = true;
-                        map.GenerateRoom(startY, startX, map);
+                        if (grid[ny, nx] == 1)
+                            count++;
                     }
                 }
             }
-            if (!found) return;
-            int x = startX;
-            int y = startY;
-            int maxSteps = 10;
-            (int dx, int dy)[] directions = new (int, int)[]
-            {
-                (1, 0),
-                (-1, 0),
-                (0, 1),
-                (0, -1),
-            };
-            for (int step = 0; step < maxSteps; step++)
-            {
-                var dir = directions[rnd.Next(directions.Length)];
-                int newX = x + dir.dx, newY = y + dir.dy;
-                if (newX >= rows) newX = rows - 1;
-                if (newX < 0) newX = 0;
-                if (newY >= cols) newY = cols - 1;
-                if (newY < 0) newY = 0;
-                if (grid[newY, newX] == 0)
-                {
-                    grid[newY, newX] = 1;
-                    x = newX;
-                    y = newY;
-
-                }
-                else
-                {
-                    if (rnd.NextDouble() < 0.1)
-                        break;
-                }
-            }
+            return count > rnd.Next(2, 4);
         }
+
         public void GenerateRoom(int x, int y, Map map)
         {
             char[,] selectedLayout = SelectRoomPreset(x, y);

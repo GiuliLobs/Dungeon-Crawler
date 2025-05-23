@@ -23,7 +23,7 @@
                 if (isSpawnRoom || isBossRoom)
                 {
                     if (isBossRoom)
-                        Mob.Add(new Monster(rnd.Next(5, 13), rnd.Next(5, 18), 24));
+                        Mob.Add(new Monster(rnd.Next(5, 13), rnd.Next(5, 18), 200));
                     return;
                 }
                 else
@@ -95,7 +95,7 @@
                         Console.Write(" ");
                     }
                 }
-                    Console.WriteLine();
+                Console.WriteLine();
             }
         }
     }

@@ -6,9 +6,9 @@ namespace Blastangel
     {
         public int HealAmount { get; set; }
         public Potion(string name, string s)
-            : base(name,s)
+            : base(name, s)
         {
-            HealAmount = RandomNumberGenerator.GetInt32(10, 20);
+            HealAmount = RandomNumberGenerator.GetInt32(60, 81);
             Symbol = "♥";
             Name = "Pozione di vita";
         }

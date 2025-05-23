@@ -6,7 +6,7 @@ namespace Blastangel
     {
         public int Damage { get; set; }
         public Weapon(string name, string s, int a)
-            :base(name, s)
+            : base(name, s)
         {
             Name = "Pugni";
             Damage = a;
@@ -19,17 +19,17 @@ namespace Blastangel
                 case 1:
                     Symbol = "♦";
                     Name = "Spada";
-                    Damage = RandomNumberGenerator.GetInt32(4, 7);
+                    Damage = RandomNumberGenerator.GetInt32(35, 41);
                     break;
                 case 2:
                     Symbol = "♠";
                     Name = "Ascia";
-                    Damage = RandomNumberGenerator.GetInt32(3, 6);
+                    Damage = RandomNumberGenerator.GetInt32(20, 36);
                     break;
                 case 3:
                     Symbol = "♣";
                     Name = "Mazza";
-                    Damage = RandomNumberGenerator.GetInt32(2, 5);
+                    Damage = RandomNumberGenerator.GetInt32(15, 21);
                     break;
             }
         }

@@ -53,15 +53,18 @@ namespace Blastangel
                 } while (c != "Y" && c != "N");
             } while (c == "Y");
             Console.WriteLine("Grazie per aver giocato!");
-            Console.ReadKey();
+            Console.WriteLine("\n(premi un tasto qualsiasi...)");
         }
 
 
         static void si()
         {
-            Console.WriteLine("Dungeon ✠ - GiuliLobs beta v1.0");
+            Console.WriteLine("Dungeon ✠ - GiuliLobs beta v1.3");
             s.Wait();
-            //map.DisplayMap(); CHEAT
+
+            //CHEAT
+            //map.DisplayMap();
+
             map.rooms[player.RoomY, player.RoomX].DisplayRoom(player);
             player.DisplayPlayerStats();
             s.Release();
@@ -70,7 +73,7 @@ namespace Blastangel
         {
             DateTime tInizio = DateTime.Now;
             Thread.Sleep(1000);
-            while (isEnd)
+            while (!isEnd)
             {
                 s.Wait();
                 Console.WriteLine("Tempo di gioco: " + (DateTime.Now - tInizio).ToString(@"mm\:ss"));
@@ -83,7 +86,7 @@ namespace Blastangel
                     }
                     catch (ArgumentOutOfRangeException)
                     {
-                        Console.SetCursorPosition(0, Console.CursorTop+1);
+                        Console.SetCursorPosition(0, Console.CursorTop + 1);
                     }
                 }
                 s.Release();
@@ -111,7 +114,7 @@ namespace Blastangel
         }
         static void MovePlayer(int roomX, int roomY)
         {
-            
+
             ConsoleKeyInfo key = Console.ReadKey(true);
 
             int newX = player.Y;
@@ -124,27 +127,28 @@ namespace Blastangel
             bool goingTopRoom = false;
             bool goingLeftRoom = false;
             player.isAttacking = false;
-            if (key.Key == ConsoleKey.W) newY--;
-            if (key.Key == ConsoleKey.S) newY++;
-            if (key.Key == ConsoleKey.A) newX--;
-            if (key.Key == ConsoleKey.D) newX++;
-
-            if (key.Key == ConsoleKey.Enter)
-            {
-                player.isAttacking = true;
-                var list = room.Mob;
-                foreach (var mob in list)
+            { //WASD + ENTER
+                if (key.Key == ConsoleKey.W || key.Key == ConsoleKey.UpArrow) newY--;
+                if (key.Key == ConsoleKey.S || key.Key == ConsoleKey.DownArrow) newY++;
+                if (key.Key == ConsoleKey.A || key.Key == ConsoleKey.LeftArrow) newX--;
+                if (key.Key == ConsoleKey.D || key.Key == ConsoleKey.RightArrow) newX++;
+                if (key.Key == ConsoleKey.Enter || key.Key == ConsoleKey.Z)
                 {
-                    if (mob.Health <= 0) continue;
-                    if (
-                        player.X-1 == mob.X && player.Y == mob.Y ||
-                        player.X + 1 == mob.X && player.Y == mob.Y ||
-                        player.X == mob.X && player.Y -1== mob.Y ||
-                        player.X == mob.X && player.Y +1== mob.Y
-                       )
+                    player.isAttacking = true;
+                    var list = room.Mob;
+                    foreach (var mob in list)
                     {
-                        player.Attack(mob);
-                        break;
+                        if (mob.Health <= 0) continue;
+                        if (
+                            player.X - 1 == mob.X && player.Y == mob.Y ||
+                            player.X + 1 == mob.X && player.Y == mob.Y ||
+                            player.X == mob.X && player.Y - 1 == mob.Y ||
+                            player.X == mob.X && player.Y + 1 == mob.Y
+                           )
+                        {
+                            player.Attack(mob);
+                            break;
+                        }
                     }
                 }
             }

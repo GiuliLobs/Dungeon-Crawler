@@ -22,19 +22,21 @@ namespace Blastangel
         public int MaxHealth { get; set; }
         public bool isAttacking { get; set; }
         public int AttackRange { get; set; } = 1;
+        public int Defense { get; set; } = 0;
         public Item Item { get; set; }
+        public List<Armor> Armors = new List<Armor>();
         internal Player() { }
         internal Player(int x, int y, Map map)
         {
             X = x;
             Y = y;
-            Damage = 2;
-            MaxHealth = 20;
+            Damage = 15;
+            MaxHealth = 100;
             Health = MaxHealth;
             RoomX = map.SpawnRoomX;
             RoomY = map.SpawnRoomY;
             isAttacking = false;
-            Item = new Weapon("Pugni","P",Damage);
+            Item = new Weapon("Pugni", "P", Damage);
         }
         public void Attack(Monster monster)
         {
@@ -50,8 +52,8 @@ namespace Blastangel
         }
         public void DisplayPlayerStats()
         {
-            Console.WriteLine("Vita      Arma     Danno");
-            Console.WriteLine(" " + Health+"       "+Item.Name+"      "+Damage);
+            Console.WriteLine("Vita    Arma   Danno   Difesa");
+            Console.WriteLine(Health + "     " + Item.Name + "    " + Damage + "      " + Defense);
         }
-    } 
+    }
 }

@@ -30,8 +30,8 @@ _**ADDED**_
 <br><br>
 
 _**FIXED**_
-**- Bad map generation**<br>
-Now
+**- Bad map generation**
+<br>Now
 - Maps can't have <10 rooms
 - Maps are better generated in terms of branching of the rooms
 <br>Before

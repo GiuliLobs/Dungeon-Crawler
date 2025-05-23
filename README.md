@@ -24,6 +24,7 @@ _**ADDED**_
 <br> _Sword:_ ♦
 <br> _Potion:_ ♥
 <br>
+
 - **Changelogs!**
 <br>(...Yeah there wheren't any before)
 <br><br>

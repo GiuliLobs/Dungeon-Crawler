@@ -15,8 +15,8 @@ _**ADDED**_
 <br> _Iron Chestplate 30 DEF_
 
 
-- **Symbols!**<br>
-Every item has a symbol.
+- **Symbols!**
+<br>Every item has a symbol.
 <br> _Chestplate:_ ≡
 <br> _Helmet:_ ∩
 <br> _Mace:_ ♣

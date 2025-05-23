@@ -10,8 +10,8 @@ _**ADDED**_
 <br> _Leather Helmet 10 DEF_
 <br> _Chainmail Helmet 20 DEF_
 <br> _Iron Helmet 30 DEF_
-<br> _Leather Chestplate 10 DEF_
-<br> _Chainmail Chestplate 20 DEF_
+<br> _Leather Chestplate 20 DEF_
+<br> _Chainmail Chestplate 40 DEF_
 <br> _Iron Chestplate 30 DEF_
 
 

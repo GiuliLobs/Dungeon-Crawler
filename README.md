@@ -35,6 +35,10 @@ _**ADDED**_
 <br><br>
 
 _**FIXED**_
+**- Monsters out player range**
+<br>
+**- Time Disappear**
+<br>
 **- Nerfed Armors**
 <br>
 **- Bad map generation**

@@ -5,9 +5,11 @@ Walk on items and press E or X to Equip
 **CHANGELOG**<br>
 (from v1.0 to now)
 _**ADDED**_
+- **Critic attacks!!**
+<br> Each weapon has a percentage chance to cause critical damage
 - **Item Infos!!**
-<br>Now you can walk on items and click "Equip" to choose which item to use
-<br>There will be comparison with your equipped item!
+<br>You can now walk over objects and click "Equip" to choose which item to use.
+<br>There will be a comparison with the item you equipped!
 - **Armors!!**
 <br>Chestplates and Helmets in 3 different materials: leather, chainmail and iron. They're dropped by any enemy
 <br> _Leather Helmet 10 DEF_

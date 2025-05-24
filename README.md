@@ -8,7 +8,7 @@ _**ADDED**_
 - **Critical attacks!!**
 <br> Each weapon has a percentage chance to cause critical damage
 - **Item Infos!!**
-<br>You can now walk over objects and click "Equip" to choose which item to use.
+<br>You can now walk over objects and click "Equip" to choose which item to use
 <br>There will be a comparison with the item you equipped!
 - **Armors!!**
 <br>Chestplates and Helmets in 3 different materials: leather, chainmail and iron. They're dropped by any enemy

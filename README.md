@@ -1,10 +1,13 @@
-WASD to move
-Enter to attack
-Walk on items to Equip
+WASD or Arrows to move
+Enter or Z to attack
+Walk on items and press E or X to Equip
 
 **CHANGELOG**<br>
 (from v1.0 to now)
 _**ADDED**_
+- **Item Infos!!**
+<br>Now you can walk on items and click "Equip" to choose which item to use
+<br>There will be a 
 - **Armors!!**
 <br>Chestplates and Helmets in 3 different materials: leather, chainmail and iron. They're dropped by any enemy
 <br> _Leather Helmet 10 DEF_

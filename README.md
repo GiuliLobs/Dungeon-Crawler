@@ -13,10 +13,10 @@ _**ADDED**_
 - **Armors!!**
 <br>Chestplates and Helmets in 3 different materials: leather, chainmail and iron. They're dropped by any enemy
 <br> _Leather Helmet 10 DEF_
-<br> _Chainmail Helmet 20 DEF_
-<br> _Iron Helmet 30 DEF_
-<br> _Leather Chestplate 20 DEF_
-<br> _Chainmail Chestplate 40 DEF_
+<br> _Chainmail Helmet 15 DEF_
+<br> _Iron Helmet 20 DEF_
+<br> _Leather Chestplate 15 DEF_
+<br> _Chainmail Chestplate 20 DEF_
 <br> _Iron Chestplate 30 DEF_
 
 
@@ -35,6 +35,8 @@ _**ADDED**_
 <br><br>
 
 _**FIXED**_
+**- Nerfed Armors**
+<br>
 **- Bad map generation**
 <br>Now
 - Maps can't have <10 rooms

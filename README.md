@@ -5,7 +5,7 @@ Walk on items and press E or X to Equip
 **CHANGELOG**<br>
 (from v1.0 to now)
 _**ADDED**_
-- **Critic attacks!!**
+- **Critical attacks!!**
 <br> Each weapon has a percentage chance to cause critical damage
 - **Item Infos!!**
 <br>You can now walk over objects and click "Equip" to choose which item to use.

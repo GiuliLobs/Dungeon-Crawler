@@ -1,6 +1,6 @@
 WASD or Arrows to move
-Enter or Z to attack
-Walk on items and press E or X to Equip
+<br>Enter or Z to attack
+<br>Walk on items and press E or X to Equip
 
 **CHANGELOG**<br>
 (from v1.0 to now)<br>

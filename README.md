@@ -7,12 +7,12 @@ Walk on items and press E or X to Equip
 _**ADDED**_
 
 - **Rarities!!**
-<br>Each drop now has rarity
-<br> _Legendary_
-<br> _Epic_
-<br> _Rare_
-<br> _Uncommon_
-<br> _Common_
+<br>Each drop now has rarity and colors
+<br> _Legendary:_ Yellow
+<br> _Epic:_ Purple
+<br> _Rare:_ Blue
+<br> _Uncommon:_ Green
+<br> _Common:_ Gray
 
 - **Critical attacks!!**
 <br> Each weapon has a percentage chance to cause critical damage

@@ -45,7 +45,7 @@ _**ADDED**_
 <br><br>
 
 _**FIXED**_
-**- Monsters out player range**
+<br>**- Monsters out player range**
 <br>
 **- Time Disappear**
 <br>

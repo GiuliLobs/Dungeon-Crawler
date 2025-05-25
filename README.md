@@ -3,7 +3,7 @@ Enter or Z to attack
 Walk on items and press E or X to Equip
 
 **CHANGELOG**<br>
-(from v1.0 to now)
+(from v1.0 to now)<br>
 _**ADDED**_
 
 - **Rarities!!**

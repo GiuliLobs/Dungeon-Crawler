@@ -7,13 +7,14 @@ namespace Blastangel
         public static Map map;
         public static Player player;
         public static SemaphoreSlim s = new SemaphoreSlim(1, 1);
-        static bool isEnd = false;
+        static bool isEnd;
         static void Main()
         {
             string c;
             Console.OutputEncoding = Encoding.UTF8;
             do
             {
+                isEnd = false;
                 Console.Clear();
                 map = new Map();
                 player = new Player(7, 14, map);
@@ -46,20 +47,20 @@ namespace Blastangel
                     Console.Clear();
                 }
                 time.Join();
+
+                    Console.WriteLine("Vuoi continuare? (Y/N)");
                 do
                 {
-                    Console.WriteLine("Vuoi continuare? (Y/N)");
                     c = Console.ReadLine();
-                } while (c != "Y" && c != "N");
-            } while (c == "Y");
+                    Console.SetCursorPosition(0, Console.CursorTop - 1);
+                } while (c != "Y" && c != "y" && c != "N" && c != "n");
+            } while (c == "Y" || c == "y");
             Console.WriteLine("Grazie per aver giocato!");
             Console.WriteLine("\n(premi un tasto qualsiasi...)");
         }
-
-
         static void si()
         {
-            Console.WriteLine("Dungeon ✠ - GiuliLobs beta v1.3");
+            Console.WriteLine("Dungeon ✠ - GiuliLobs beta v1.6");
             s.Wait();
 
             //CHEAT
@@ -114,9 +115,8 @@ namespace Blastangel
         }
         static void MovePlayer(int roomX, int roomY)
         {
-
             ConsoleKeyInfo key = Console.ReadKey(true);
-
+            player.isTaking = false;
             int newX = player.Y;
             int newY = player.X;
             Room room = map.rooms[roomY, roomX];
@@ -127,11 +127,12 @@ namespace Blastangel
             bool goingTopRoom = false;
             bool goingLeftRoom = false;
             player.isAttacking = false;
-            { //WASD + ENTER
+            { //WASD + ENTER + E - ARROWS + Z + X
                 if (key.Key == ConsoleKey.W || key.Key == ConsoleKey.UpArrow) newY--;
                 if (key.Key == ConsoleKey.S || key.Key == ConsoleKey.DownArrow) newY++;
                 if (key.Key == ConsoleKey.A || key.Key == ConsoleKey.LeftArrow) newX--;
                 if (key.Key == ConsoleKey.D || key.Key == ConsoleKey.RightArrow) newX++;
+                if (key.Key == ConsoleKey.E || key.Key == ConsoleKey.X) player.isTaking = true;
                 if (key.Key == ConsoleKey.Enter || key.Key == ConsoleKey.Z)
                 {
                     player.isAttacking = true;
@@ -139,12 +140,10 @@ namespace Blastangel
                     foreach (var mob in list)
                     {
                         if (mob.Health <= 0) continue;
-                        if (
-                            player.X - 1 == mob.X && player.Y == mob.Y ||
+                        if (player.X - 1 == mob.X && player.Y == mob.Y ||
                             player.X + 1 == mob.X && player.Y == mob.Y ||
                             player.X == mob.X && player.Y - 1 == mob.Y ||
-                            player.X == mob.X && player.Y + 1 == mob.Y
-                           )
+                            player.X == mob.X && player.Y + 1 == mob.Y)
                         {
                             player.Attack(mob);
                             break;

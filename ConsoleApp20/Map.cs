@@ -37,7 +37,7 @@ namespace Blastangel
             grid[startY, startX] = 1;
             List<(int x, int y)> activeRooms = new();
             int roomCount = 1;
-            int minRooms = 10;
+            int minRooms = 12;
 
             activeRooms.Add((startX, startY));
 
@@ -46,10 +46,7 @@ namespace Blastangel
                 int index = rnd.Next(activeRooms.Count);
                 var (x, y) = activeRooms[index];
 
-                (int dx, int dy)[] directions = new (int, int)[]
-                {
-        (1, 0), (-1, 0), (0, 1), (0, -1),
-                };
+                (int dx, int dy)[] directions = [ (1, 0), (-1, 0), (0, 1), (0, -1) ];
 
                 directions = directions.OrderBy(_ => rnd.Next()).ToArray();
 

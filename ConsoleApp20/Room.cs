@@ -4,7 +4,7 @@
     {
         public List<Monster> Mob = new List<Monster>();
         public List<Drop> DropList = new List<Drop>();
-        static Random rnd = new Random();
+        public static readonly Random rnd = new Random();
         public int X { get; set; }
         public int Monsters { get; set; }
         public int Y { get; set; }
@@ -23,7 +23,7 @@
                 if (isSpawnRoom || isBossRoom)
                 {
                     if (isBossRoom)
-                        Mob.Add(new Monster(rnd.Next(5, 13), rnd.Next(5, 18), 200));
+                        Mob.Add(new Monster(rnd.Next(5, 13), rnd.Next(5, 18), 260));
                     return;
                 }
                 else
@@ -35,15 +35,25 @@
         }
         public void DisplayRoom(Player player)
         {
+            
             foreach (var m in Mob)
                 m.Update(Layout, player, Mob, this);
 
             var dropHere = DropList.FirstOrDefault(d => d.X == player.X && d.Y == player.Y);
+
             if (dropHere != null)
             {
-                dropHere.TakeDrop(player);
-                DropList.RemoveAll(d => d.X == player.X && d.Y == player.Y);
+                player.isOnItem = true;
+                if (player.isTaking)
+                {
+                    dropHere.TakeDrop(player);
+                    player.isTaking = false;
+                    DropList.RemoveAll(d => d.X == player.X && d.Y == player.Y);
+                }
             }
+            else
+                player.isOnItem = false;
+
             Console.WriteLine();
             for (int r = 0; r < Layout.GetLength(0); r++)
             {
@@ -83,7 +93,7 @@
                     var drop = DropList.FirstOrDefault(d => d.X == r && d.Y == c);
                     if (drop != null)
                     {
-                        Console.Write(drop.Item.Symbol);
+                        drop.Item.PrintItem();
                         continue;
                     }
                     try
@@ -95,8 +105,23 @@
                         Console.Write(" ");
                     }
                 }
+                if (player.isOnItem)
+                {
+                    Console.Write("     ");
+                    dropHere.Item.ItemInfo(r, dropHere);
+                    if ((dropHere.Item is Weapon weapon &&
+                        player.Item !=null) ||
+                        (dropHere.Item is Armor armor &&
+                        (player.Helmet.Name == armor.Name ||
+                        player.Chestplate.Name == armor.Name)))
+                    {
+                        player.EquippedItemInfo(r, dropHere);
+                    }
+                }
                 Console.WriteLine();
             }
         }
+        
+        
     }
 }

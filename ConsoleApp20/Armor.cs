@@ -1,64 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Blastangel
+﻿namespace Blastangel
 {
     internal class Armor : Item
     {
-        Random rnd = new Random();
         public int Defense { get; set; }
         public string Material { get; set; }
-        public Armor(string name, string sym,string material, Player player) 
-            : base(name, sym)
+        public Armor(string name, string sym, Rarity rarity)
+            : base(name, sym, rarity)
         {
-            Use(player);
-            switch (rnd.Next(0,6))
-            {
-                case 0:
-                    Symbol = "∩";
-                    Defense = 10;
-                    Name = "Elmo";
-                    Material = "Pelle";
-                    break;
-                case 1:
-                    Symbol = "∩";
-                    Defense = 20;
-                    Name = "Elmo";
-                    Material = "Maglia";
-                    break;
-                case 2:
-                    Symbol = "∩";
-                    Defense = 30;
-                    Name = "Elmo";
-                    Material = "Ferro";
-                    break;
-                case 3:
-                    Symbol = "≡";
-                    Defense = 20;
-                    Name = "Corazza";
-                    Material = "Pelle";
-                    break;
-                case 4:
-                    Symbol = "≡";
-                    Defense = 30;
-                    Name = "Corazza";
-                    Material = "Maglia";
-                    break;
-                case 5:
-                    Symbol = "≡";
-                    Defense = 40;
-                    Name = "Corazza";
-                    Material = "Ferro";
-                    break;
-
-            }
+            Name = name;
+            Defense = 0;
+            Material = "No";
         }
-        public void Use(Player player)
+        public Armor(string name, string sym, int defense, string material, Rarity rarity)
+            : base(name, sym, rarity)
         {
-            player.Defense += Defense;
+            Symbol = sym;
+            Defense = defense;
+            Name = name;
+            Material = material;
+            ItemRarity = rarity;
         }
     }
 }

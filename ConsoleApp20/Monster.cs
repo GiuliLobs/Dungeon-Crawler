@@ -1,6 +1,4 @@
-﻿using System.Security.Cryptography;
-
-namespace Blastangel
+﻿namespace Blastangel
 {
     internal enum MonsterState { Idle, Patrol, Chase, Attack }
 
@@ -26,7 +24,7 @@ namespace Blastangel
         {
             X = x;
             Y = y;
-            Health = 90;
+            Health = 100;
             Damage = 9;
             Droppato = false;
         }
@@ -110,8 +108,9 @@ namespace Blastangel
             int newX = X + dx;
             int newY = Y + dy;
 
-            if (newX < 0 || newX >= layout.GetLength(0) ||
-                newY < 0 || newY >= layout.GetLength(1))
+            if (newX < 2 || newX > layout.GetLength(0) - 2 ||
+                newY < 2 || newY > layout.GetLength(1) - 2
+                )
                 return;
             if (layout[newX, newY] == '█')
                 return;

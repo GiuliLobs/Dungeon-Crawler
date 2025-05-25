@@ -5,19 +5,30 @@ Walk on items and press E or X to Equip
 **CHANGELOG**<br>
 (from v1.0 to now)
 _**ADDED**_
+
+- **Rarities!!**
+<br>Each drop now has rarity
+<br> _Legendary_
+<br> _Epic_
+<br> _Rare_
+<br> _Uncommon_
+<br> _Common_
+
 - **Critical attacks!!**
 <br> Each weapon has a percentage chance to cause critical damage
+
 - **Item Infos!!**
 <br>You can now walk over objects and click "Equip" to choose which item to use
 <br>There will be a comparison with the item you equipped!
+
 - **Armors!!**
 <br>Chestplates and Helmets in 3 different materials: leather, chainmail and iron. They're dropped by any enemy
-<br> _Leather Helmet 10 DEF_
-<br> _Chainmail Helmet 15 DEF_
-<br> _Iron Helmet 20 DEF_
-<br> _Leather Chestplate 15 DEF_
-<br> _Chainmail Chestplate 20 DEF_
-<br> _Iron Chestplate 30 DEF_
+<br> _Leather Helmet_
+<br> _Chainmail Helmet_
+<br> _Iron Helmet_
+<br> _Leather Chestplate_
+<br> _Chainmail Chestplate_
+<br> _Iron Chestplate_
 
 
 - **Symbols!**
@@ -28,7 +39,6 @@ _**ADDED**_
 <br> _Axe:_ ♠
 <br> _Sword:_ ♦
 <br> _Potion:_ ♥
-<br>
 
 - **Changelogs!**
 <br>(...Yeah there wheren't any before)
